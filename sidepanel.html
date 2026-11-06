@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak — Side-Panel AI Agent</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="logo-group">
+          <div class="logo-icon">S</div>
+          <span class="app-title">Sahayak</span>
+        </div>
+        <div class="header-actions">
+          <!-- Language Toggle: two-pill group (replaces old single btn-lang-toggle) -->
+          <div class="lang-toggle-group">
+            <button id="btn-lang-en" class="lang-btn active" title="Reply in English">EN</button>
+            <button id="btn-lang-hinglish" class="lang-btn" title="Reply in Hinglish">Hinglish</button>
+          </div>
+          <button id="btn-emergency-stop" class="pill-btn" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Emergency Kill-Switch">Stop</button>
+        </div>
+      </div>
+
+      <!-- Active Tab Indicator -->
+      <div class="tab-badge" id="active-tab-badge" title="Active browser tab">
+        <span class="tab-dot" id="tab-status-dot"></span>
+        <span class="tab-title-text" id="tab-title-display">Connecting to active tab...</span>
+      </div>
+    </header>
+
+    <!-- Nav Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="tab-btn-task" data-view="view-task">Task</button>
+      <button class="nav-tab" id="tab-btn-chat" data-view="view-chat">Page Chat</button>
+      <button class="nav-tab" id="tab-btn-settings" data-view="view-settings">Settings</button>
+    </nav>
+
+    <!-- Main View Content Area -->
+    <main class="main-view">
+
+      <!-- Missing API Key Alert Banner -->
+      <div id="banner-missing-key" class="alert-banner info" style="display: none;">
+        <span>ℹ️</span>
+        <div>
+          <strong>Setup Required:</strong> Please <span class="alert-link" id="link-open-settings">enter your Gemini API key in Settings</span> to get started.
+        </div>
+      </div>
+
+      <!-- Sensitive Page Warning Banner -->
+      <div id="banner-sensitive-page" class="alert-banner warning" style="display: none;">
+        <span>🔒</span>
+        <div>
+          <strong>Safety Protection:</strong> Sahayak is paused on this sensitive page (banking, payment, or login).
+        </div>
+      </div>
+
+      <!-- VIEW 1: Task / Errand Mode -->
+      <section id="view-task" class="tab-content" style="display: flex; flex-direction: column; gap: 14px;">
+
+        <!-- Task Input Box Card -->
+        <div class="card">
+          <div class="card-title">
+            <span>Browser Errand or Question</span>
+            <span id="badge-model-indicator" style="font-size: 11px; color: var(--primary);">Gemini 3.8 Flash</span>
+          </div>
+
+          <label class="input-label" for="input-task">Instruction</label>
+          <textarea
+            id="input-task"
+            class="text-area"
+            placeholder="e.g. Summarise this article, or fill the practice application form with my profile..."
+          ></textarea>
+
+          <!-- Quick Actions Row -->
+          <div class="quick-actions-row">
+            <button class="qa-btn" data-action="explain">✦ Explain</button>
+            <button class="qa-btn" data-action="translate">🌐 Translate</button>
+            <button class="qa-btn" data-action="draft">✉ Draft Reply</button>
+            <button class="qa-btn" data-action="summarize">📋 Summarize</button>
+          </div>
+          <button id="scanBtn" class="btn btn-primary" style="width:100%; margin-top:10px;">🔍 Scan Page</button>
+          <!-- Screenshot & Ask -->
+            <div class="card" style="margin-top:10px;">
+            <button id="screenshotBtn" class="btn btn-primary" style="width:100%;">📸 Screenshot & Ask</button>
+            <div id="screenshotPreview" style="display:none; margin-top:10px;">
+            <img id="screenshotImg" style="width:100%; border-radius:8px; border:1px solid #ccc;">
+            <input id="screenshotQ" type="text" placeholder="Ask about this screenshot..." style="width:100%; margin-top:8px; padding:8px;">
+            <button id="askScreenshotBtn" class="btn btn-primary" style="margin-top:6px; width:100%;">Ask</button>
+            </div>
+            </div>
+
+          <!-- Quick Action Result -->
+          <div id="quick-action-result" class="result-card" style="display:none;"></div>
+
+          <div class="btn-row">
+            <button id="btn-start" class="btn btn-primary">
+              <span id="btn-start-text">▶ Start</span>
+            </button>
+            <button id="btn-stop" class="btn btn-danger" disabled>
+              <span>⏹ Stop</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Bar Card -->
+        <div class="card progress-card">
+          <div class="progress-header">
+            <span id="progress-status-label">Idle</span>
+            <span id="step-indicator">Step 0 / 8</span>
+          </div>
+          <div class="progress-track">
+            <div id="progress-bar-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Generated Plan Steps Card -->
+        <div id="plan-card" class="card plan-steps-card" style="display: none;">
+          <div class="card-title">
+            <span id="plan-title-display">Generated Plan</span>
+            <span id="plan-step-count" class="pill-btn" style="cursor: default;">0 Steps</span>
+          </div>
+          <div id="plan-steps-list" class="steps-list">
+            <!-- Steps dynamically rendered by Gemini planner -->
+          </div>
+        </div>
+        <!-- One-Click Skills -->
+<div class="card" id="skills-card">
+  <h3 style="margin:0 0 10px">⚡ One-Click Skills</h3>
+  <div id="skills-list"></div>
+  <input id="skill-name" placeholder="Skill Name - ex: Fill form from profile" style="width:100%; margin-bottom:6px">
+  <input id="skill-prompt" placeholder="Prompt - ex: Fill form using my profile..." style="width:100%; margin-bottom:6px">
+  <button id="btn-add-skill">+ Add Skill</button>
+  <div style="display:flex; gap:8px; margin-top:8px">
+    <button id="btn-export-skills">Export ⬇️</button>
+    <label style="cursor:pointer; border:1px solid #ccc; padding:4px 8px">Import ⬆️
+      <input type="file" id="import-skills-file" accept=".json" hidden>
+    </label>
+  </div>
+</div>
+        <div style="padding:12px; border:1px solid #3a3f4a; border-radius:10px; margin-top:12px; background:#1e222b;">
+  <h3 style="margin:0 0 10px 0; color:white;">👤 My Profile</h3>
+  <input id="p-name" placeholder="Your Name" style="width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #444; background:#2a2f3a; color:white;">
+  <input id="p-college" placeholder="College" style="width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #444; background:#2a2f3a; color:white;">
+  <input id="p-skills" placeholder="Skills e.g. Python, Excel" style="width:100%; padding:8px; margin-bottom:6px; border-radius:6px; border:1px solid #444; background:#2a2f3a; color:white;">
+  <input id="p-lang" placeholder="Language e.g. Tamil, English" style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; border:1px solid #444; background:#2a2f3a; color:white;">
+  <button id="save-profile" style="width:100%; padding:9px; background:#2f7bff; color:white; border:none; border-radius:6px; font-weight:bold;">Save Profile</button>
+  <div id="profile-status" style="color:#4ade80; font-size:12px; margin-top:6px;"></div>
+</div>
+        <!-- Activity Log Console -->
+        <div class="card">
+          <div class="card-title">
+            <span>Activity Log</span>
+            <button id="btn-clear-log" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:11px;">Clear</button>
+          </div>
+          <div id="status-log" class="status-log">
+            <div class="log-entry">
+              <span class="log-time">[Init]</span>
+              <span class="log-msg highlight">Sahayak extension shell loaded.</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIEW 2: Page Chat -->
+      <section id="view-chat" class="tab-content" style="display: none; flex-direction: column; gap: 12px;">
+
+        <div class="card" style="gap: 8px;">
+          <div class="card-title">
+            <span>Page Chat</span>
+            <span style="font-size:10px; color:var(--text-muted);">Answers from current page only</span>
+          </div>
+          <p style="font-size:11px; color:var(--text-muted); margin:0;">
+            Ask anything about the page you're viewing. If the answer isn't on the page, I'll tell you.
+          </p>
+        </div>
+
+        <!-- Chat Thread -->
+        <div id="chat-thread" class="chat-thread"></div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="text-input" placeholder="Ask about this page...">
+          <button id="btn-chat-send" class="btn btn-primary" style="flex: 0 0 auto; padding: 9px 16px; min-width: 60px;">Send</button>
+        </div>
+
+        <button id="btn-chat-clear" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:11px; align-self:flex-end;">Clear chat</button>
+
+      </section>
+
+      <!-- VIEW 3: Settings View -->
+      <section id="view-settings" class="tab-content" style="display: none; flex-direction: column; gap: 14px;">
+
+        <div class="card">
+          <div class="card-title">
+            <span>AI Credentials</span>
+            <span id="gemini-status-tag" class="status-tag missing">Not Configured</span>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-field">
+              <label class="input-label" for="input-gemini-key">Gemini API Key (Required)</label>
+              <input
+                type="password"
+                id="input-gemini-key"
+                class="text-input"
+                placeholder="AIzaSy..."
+                autocomplete="off"
+              >
+              <p class="field-help">
+                Get a free key from <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">Google AI Studio &nearr;</a>. Stored locally only.
+              </p>
+            </div>
+
+            <div class="settings-field">
+              <label class="input-label" for="input-groq-key">Groq API Key (Optional Fallback)</label>
+              <input
+                type="password"
+                id="input-groq-key"
+                class="text-input"
+                placeholder="gsk_..."
+                autocomplete="off"
+              >
+              <p class="field-help">
+                Used for text tasks if Gemini hits HTTP 429 rate limits. Free at <a href="https://groq.com/" target="_blank" rel="noreferrer">groq.com &nearr;</a>.
+              </p>
+            </div>
+
+            <div class="settings-field">
+              <label class="input-label">Practice Environment Allowlist</label>
+              <p class="field-help" style="margin-top: 2px;">
+                Permitted automated practice domains:
+                <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">http://localhost:*, http://127.0.0.1:*</code>
+              </p>
+            </div>
+
+            <div class="btn-row" style="margin-top: 8px;">
+              <button id="btn-save-settings" class="btn btn-primary">
+                Save Settings
+              </button>
+              <button id="btn-clear-settings" class="btn btn-secondary">
+                Clear
+              </button>
+            </div>
+            <div id="settings-save-feedback" style="display: none; font-size: 11px; color: var(--success); text-align: center; font-weight: 600;">
+              ✓ Settings saved locally
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Bottom Footer -->
+    <footer class="app-footer">
+      <span>Sahayak v1.1.0</span>
+      <span id="footer-status">Ready</span>
+    </footer>
+
+  </div>
+  
+
+  <script src="gemini.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
